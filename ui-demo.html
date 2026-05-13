@@ -1,0 +1,3025 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FluxText UI / Animation Demo</title>
+    <style>
+      /* ========== Fonts ========== */
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+      /* ========== CSS Variables (matching project) ========== */
+      :root {
+        --font-mono:
+          'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        --color-background-primary: #ffffff;
+        --color-background-secondary: #f8f8fa;
+        --color-background-tertiary: #f0f0f2;
+        --color-text-primary: #1a1a2e;
+        --color-text-secondary: #4a4a5e;
+        --color-text-tertiary: #8a8a9e;
+        --color-border-secondary: #d4d4dc;
+        --color-border-tertiary: #e8e8ee;
+        --color-accent: #534ab7;
+        --color-accent-hover: #3c3489;
+        --color-accent-light: #eeedfe;
+        --color-success: #1d9e75;
+        --color-success-bg: #eaf3de;
+        --color-success-text: #3b6d11;
+        --color-warning: #ba7517;
+        --color-warning-bg: #faeeda;
+        --color-error: #e24b4a;
+        --color-error-bg: #fcebeb;
+        --color-error-text: #a32d2d;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--font-mono);
+        background: var(--color-background-primary);
+        color: var(--color-text-primary);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        height: 100vh;
+        width: 100vw;
+        font-size: 13px;
+      }
+
+      /* ========== Layout ========== */
+      .app {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /* ========== Sidebar ========== */
+      .sidebar {
+        width: 44px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 0;
+        gap: 4px;
+        flex-shrink: 0;
+        border-right: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .sidebar-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        position: relative;
+        overflow: hidden;
+        transition:
+          color 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .sidebar-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 8px;
+        background: var(--color-accent-light);
+        transform: scale(0);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .sidebar-btn:hover::before {
+        transform: scale(1);
+      }
+
+      .sidebar-btn.active::before {
+        transform: scale(1);
+      }
+
+      .sidebar-btn.active {
+        color: var(--color-accent);
+      }
+
+      .sidebar-btn svg {
+        position: relative;
+        z-index: 1;
+      }
+
+      .sidebar-btn:active {
+        transform: scale(0.9);
+        transition: transform 0.1s ease;
+      }
+
+      .sidebar-divider {
+        width: 20px;
+        height: 0.5px;
+        background: var(--color-border-tertiary);
+        margin: 4px 0;
+      }
+
+      .sidebar-bottom {
+        margin-top: auto;
+      }
+
+      /* ========== Main Content ========== */
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* ========== View Transition ========== */
+      .view-container {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .view {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+        pointer-events: none;
+        transition:
+          opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+          transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: opacity, transform;
+      }
+
+      .view.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+
+      .view.exit-up {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+      }
+
+      .view.exit-down {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+
+      /* ========== Status Bar (Editor) ========== */
+      .status-bar {
+        height: 26px;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 14px;
+        flex-shrink: 0;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .status-item {
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--color-text-tertiary);
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #27c93f;
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+          box-shadow: 0 0 0 0 rgba(39, 201, 63, 0.4);
+        }
+        50% {
+          opacity: 0.8;
+          box-shadow: 0 0 0 4px rgba(39, 201, 63, 0);
+        }
+      }
+
+      .status-action {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+        transition: color 0.15s;
+        background: none;
+        border: none;
+        font-family: var(--font-mono);
+      }
+
+      .status-action:hover {
+        color: var(--color-accent);
+      }
+
+      /* ========== Editor Mock ========== */
+      .editor-area {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        background: var(--color-background-primary);
+      }
+
+      .line-numbers {
+        width: 48px;
+        padding: 12px 8px 12px 0;
+        text-align: right;
+        background: var(--color-background-secondary);
+        color: var(--color-text-tertiary);
+        font-size: 12px;
+        line-height: 20px;
+        user-select: none;
+        flex-shrink: 0;
+      }
+
+      .code-content {
+        flex: 1;
+        padding: 12px 16px;
+        font-size: 13px;
+        line-height: 20px;
+        overflow: auto;
+        white-space: pre;
+        color: var(--color-text-primary);
+      }
+
+      .code-content .keyword {
+        color: #7b30d0;
+      }
+      .code-content .string {
+        color: #067d17;
+      }
+      .code-content .comment {
+        color: var(--color-text-tertiary);
+        font-style: italic;
+      }
+      .code-content .func {
+        color: #00627a;
+      }
+      .code-content .type {
+        color: #0033b3;
+      }
+
+      /* Cursor blink */
+      .cursor-blink {
+        display: inline-block;
+        width: 1.5px;
+        height: 16px;
+        background: var(--color-accent);
+        vertical-align: text-bottom;
+        animation: blink 1s step-end infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* ========== Bottom bar ========== */
+      .bottom-bar {
+        height: 28px;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        gap: 10px;
+        flex-shrink: 0;
+        border-top: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .output-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-tertiary);
+      }
+
+      .output-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+      }
+
+      .output-badge.idle {
+        background: var(--color-background-tertiary);
+        color: var(--color-text-tertiary);
+      }
+
+      .output-badge.success {
+        background: var(--color-success-bg);
+        color: var(--color-success-text);
+        animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      @keyframes badge-pop {
+        0% {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* ========== Command Palette ========== */
+      .palette-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 70px;
+        z-index: 50;
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(0px);
+        pointer-events: none;
+        transition:
+          background 0.2s ease,
+          backdrop-filter 0.2s ease;
+      }
+
+      .palette-overlay.open {
+        background: rgba(0, 0, 0, 0.25);
+        backdrop-filter: blur(4px);
+        pointer-events: auto;
+      }
+
+      .palette-panel {
+        width: 560px;
+        overflow: hidden;
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-secondary);
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        transform: scale(0.95) translateY(-10px);
+        opacity: 0;
+        transition:
+          transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+          opacity 0.2s ease;
+      }
+
+      .palette-overlay.open .palette-panel {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+
+      .palette-search {
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 10px;
+        height: 48px;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .palette-search svg {
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+      }
+
+      .palette-search input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 13px;
+        background: transparent;
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+      }
+
+      .palette-search input::placeholder {
+        color: var(--color-text-tertiary);
+      }
+
+      .palette-list {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 4px 0;
+      }
+
+      .palette-item {
+        display: flex;
+        align-items: center;
+        padding: 6px 14px;
+        cursor: pointer;
+        gap: 10px;
+        background: transparent;
+        transition: background 0.12s ease;
+      }
+
+      .palette-item:hover,
+      .palette-item.selected {
+        background: var(--color-accent-light);
+      }
+
+      /* Staggered entry for palette items — only on first open */
+      .palette-list.animate-in .palette-item {
+        animation: palette-item-in 0.2s ease both;
+      }
+      .palette-list.animate-in .palette-item:nth-child(1) {
+        animation-delay: 0.02s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(2) {
+        animation-delay: 0.04s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(3) {
+        animation-delay: 0.06s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(4) {
+        animation-delay: 0.08s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(5) {
+        animation-delay: 0.1s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(6) {
+        animation-delay: 0.12s;
+      }
+      .palette-list.animate-in .palette-item:nth-child(7) {
+        animation-delay: 0.14s;
+      }
+
+      @keyframes palette-item-in {
+        from {
+          opacity: 0;
+          transform: translateX(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .palette-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+        background: var(--color-background-tertiary);
+        color: var(--color-text-secondary);
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+
+      .palette-item.selected .palette-icon,
+      .palette-item:hover .palette-icon {
+        background: var(--color-accent);
+        color: white;
+      }
+
+      .palette-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text-primary);
+        transition: color 0.15s;
+      }
+
+      .palette-item.selected .palette-name,
+      .palette-item:hover .palette-name {
+        color: var(--color-accent-hover);
+      }
+
+      .palette-desc {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        margin-top: 1px;
+        transition: color 0.15s;
+      }
+
+      .palette-item.selected .palette-desc,
+      .palette-item:hover .palette-desc {
+        color: var(--color-accent);
+      }
+
+      .palette-enter-key {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--color-background-tertiary);
+        border: 0.5px solid var(--color-border-tertiary);
+        color: var(--color-text-secondary);
+        margin-left: auto;
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+
+      .palette-item.selected .palette-enter-key,
+      .palette-item:hover .palette-enter-key {
+        opacity: 1;
+      }
+
+      .palette-hints {
+        display: flex;
+        gap: 12px;
+        padding: 6px 14px;
+        border-top: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .hint-item {
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--color-text-tertiary);
+      }
+
+      .hint-key {
+        font-size: 10px;
+        padding: 2px 4px;
+        border-radius: 4px;
+        background: var(--color-background-tertiary);
+        border: 0.5px solid var(--color-border-tertiary);
+      }
+
+      /* ========== Scripts View ========== */
+      .scripts-content {
+        padding: 20px;
+        overflow: auto;
+        flex: 1;
+      }
+
+      .scripts-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .scripts-title {
+        font-weight: 500;
+        font-size: 1.15em;
+        color: var(--color-text-primary);
+      }
+
+      .scripts-header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        height: 32px;
+        padding: 0 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        font-family: var(--font-mono);
+        border: 0.5px solid var(--color-border-secondary);
+        background: none;
+        color: var(--color-text-secondary);
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          transform 0.1s;
+      }
+
+      .btn:hover {
+        background: var(--color-background-secondary);
+        border-color: var(--color-border-secondary);
+      }
+
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      .btn-primary {
+        background: var(--color-accent);
+        color: white;
+        border: none;
+      }
+
+      .btn-primary:hover {
+        background: var(--color-accent-hover);
+      }
+
+      .section-label {
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.85em;
+        color: var(--color-text-tertiary);
+        margin-bottom: 10px;
+      }
+
+      .script-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-primary);
+        margin-bottom: 8px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s,
+          transform 0.2s;
+        cursor: default;
+      }
+
+      .script-card:hover {
+        border-color: var(--color-border-secondary);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        transform: translateY(-1px);
+      }
+
+      /* Staggered entry for script cards */
+      .script-card {
+        animation: card-in 0.3s ease both;
+      }
+      .script-card:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .script-card:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .script-card:nth-child(3) {
+        animation-delay: 0.15s;
+      }
+      .script-card:nth-child(4) {
+        animation-delay: 0.2s;
+      }
+      .script-card:nth-child(5) {
+        animation-delay: 0.25s;
+      }
+      .script-card:nth-child(6) {
+        animation-delay: 0.3s;
+      }
+
+      @keyframes card-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .script-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: var(--color-background-secondary);
+        color: var(--color-text-secondary);
+        transition:
+          background 0.2s,
+          color 0.2s;
+      }
+
+      .script-card:hover .script-icon {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+
+      .script-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .script-name {
+        font-weight: 500;
+        font-size: 1em;
+        color: var(--color-text-primary);
+      }
+
+      .script-desc {
+        font-size: 0.85em;
+        color: var(--color-text-tertiary);
+        margin-top: 2px;
+      }
+
+      .script-badge {
+        font-size: 0.75em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--color-background-secondary);
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+      }
+
+      .script-edit-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-tertiary);
+        opacity: 0;
+        transition:
+          opacity 0.15s,
+          background 0.15s,
+          color 0.15s;
+      }
+
+      .script-card:hover .script-edit-btn {
+        opacity: 1;
+      }
+
+      .script-edit-btn:hover {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+
+      /* ========== Settings View ========== */
+      .settings-content {
+        padding: 20px;
+        overflow: auto;
+        flex: 1;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .setting-card {
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-primary);
+        animation: card-in 0.3s ease both;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .setting-card:hover {
+        border-color: var(--color-border-secondary);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+      }
+
+      .setting-card-title {
+        font-weight: 500;
+        font-size: 1em;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .setting-card-title svg {
+        color: var(--color-accent);
+      }
+
+      .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .setting-row:last-child {
+        border-bottom: none;
+      }
+
+      .setting-label {
+        font-size: 0.9em;
+        color: var(--color-text-secondary);
+      }
+
+      /* ========== Toggle ========== */
+      .toggle {
+        width: 28px;
+        height: 16px;
+        border-radius: 8px;
+        position: relative;
+        cursor: pointer;
+        flex-shrink: 0;
+        background: var(--color-border-tertiary);
+        transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .toggle.on {
+        background: var(--color-accent);
+      }
+
+      .toggle-knob {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition:
+          left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+          width 0.15s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+
+      .toggle.on .toggle-knob {
+        left: 14px;
+      }
+
+      .toggle:active .toggle-knob {
+        width: 14px;
+      }
+
+      .toggle.on:active .toggle-knob {
+        left: 12px;
+        width: 14px;
+      }
+
+      /* ========== Font Size Stepper ========== */
+      .stepper {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .stepper-btn {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        cursor: pointer;
+        background: var(--color-background-tertiary);
+        border: 0.5px solid var(--color-border-tertiary);
+        color: var(--color-text-secondary);
+        transition:
+          background 0.15s,
+          transform 0.1s;
+        font-size: 12px;
+        font-family: var(--font-mono);
+      }
+
+      .stepper-btn:hover {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+      .stepper-btn:active {
+        transform: scale(0.9);
+      }
+
+      .stepper-val {
+        width: 28px;
+        text-align: center;
+        font-size: 0.9em;
+        color: var(--color-text-primary);
+        transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      .stepper-val.bump {
+        animation: bump 0.2s ease;
+      }
+
+      @keyframes bump {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      /* ========== Debugger View ========== */
+      .debugger-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .debugger-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-right: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .debugger-right {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .tab-bar {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .tab-item {
+        height: 36px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 12px;
+        font-size: 11px;
+        cursor: pointer;
+        flex-shrink: 0;
+        border-right: 0.5px solid var(--color-border-tertiary);
+        background: transparent;
+        color: var(--color-text-tertiary);
+        transition:
+          background 0.15s,
+          color 0.15s;
+        border: none;
+        font-family: var(--font-mono);
+      }
+
+      .tab-item.active {
+        background: var(--color-background-primary);
+        color: var(--color-text-secondary);
+      }
+
+      .tab-dirty {
+        color: var(--color-warning);
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .tab-actions {
+        display: flex;
+        gap: 4px;
+        padding: 0 8px;
+        flex-shrink: 0;
+        margin-left: auto;
+      }
+
+      .run-btn {
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-family: var(--font-mono);
+        background: var(--color-accent);
+        color: white;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+      }
+
+      .run-btn:hover {
+        background: var(--color-accent-hover);
+      }
+      .run-btn:active {
+        transform: scale(0.97);
+      }
+
+      .run-btn.running {
+        background: var(--color-warning);
+        animation: running-pulse 1s ease-in-out infinite;
+      }
+
+      @keyframes running-pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.8;
+        }
+      }
+
+      .icon-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-tertiary);
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+
+      .icon-btn:hover {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+
+      /* Console area */
+      .console-area {
+        height: 120px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-top: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .console-header {
+        height: 30px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        gap: 8px;
+        flex-shrink: 0;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .console-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-secondary);
+      }
+
+      .console-status {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: auto;
+        transition: all 0.3s;
+      }
+
+      .console-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 12px;
+      }
+
+      .console-line {
+        font-size: 11px;
+        line-height: 18px;
+        margin-bottom: 1px;
+        font-family: var(--font-mono);
+        animation: console-line-in 0.15s ease both;
+      }
+
+      @keyframes console-line-in {
+        from {
+          opacity: 0;
+          transform: translateX(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .console-line.dim {
+        color: var(--color-text-tertiary);
+      }
+      .console-line.ok {
+        color: var(--color-success);
+      }
+      .console-line.err {
+        color: var(--color-error);
+      }
+      .console-line.warn {
+        color: var(--color-warning);
+      }
+
+      /* Right pane sections */
+      .pane-section {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .pane-section.flex-1 {
+        flex: 1;
+      }
+
+      .pane-header {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        flex-shrink: 0;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+        background: var(--color-background-secondary);
+      }
+
+      .pane-header-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-text-tertiary);
+      }
+
+      .pane-body {
+        flex: 1;
+        padding: 10px;
+        overflow: auto;
+      }
+
+      .pane-textarea {
+        flex: 1;
+        padding: 10px;
+        font-size: 12px;
+        line-height: 20px;
+        resize: none;
+        background: transparent;
+        border: none;
+        outline: none;
+        overflow: auto;
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        width: 100%;
+        height: 100%;
+      }
+
+      .pane-output {
+        flex: 1;
+        padding: 10px;
+        font-size: 12px;
+        line-height: 20px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-family: var(--font-mono);
+        color: var(--color-text-tertiary);
+      }
+
+      .pane-output.has-content {
+        color: var(--color-text-primary);
+      }
+
+      /* Param row */
+      .param-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .param-label {
+        font-size: 11px;
+        width: 90px;
+        flex-shrink: 0;
+        color: var(--color-text-secondary);
+      }
+
+      .param-snapshot {
+        padding-top: 4px;
+        margin-top: 4px;
+        border-top: 0.5px solid var(--color-border-tertiary);
+      }
+
+      .param-snapshot-label {
+        font-size: 10px;
+        color: var(--color-text-tertiary);
+      }
+
+      .param-snapshot-pre {
+        font-size: 11px;
+        margin-top: 2px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: var(--color-text-tertiary);
+        font-family: var(--font-mono);
+      }
+
+      /* Mini select */
+      .mini-select {
+        flex: 1;
+        min-width: 0;
+        position: relative;
+      }
+
+      .mini-select-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-secondary);
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        transition: border-color 0.15s;
+      }
+
+      .mini-select-trigger:hover {
+        border-color: var(--color-accent);
+      }
+
+      .mini-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 4px;
+        border-radius: 6px;
+        overflow: hidden;
+        z-index: 9999;
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-secondary);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        animation: dropdown-in 0.15s ease;
+      }
+
+      @keyframes dropdown-in {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .mini-select-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        color: var(--color-text-primary);
+        transition: background 0.12s;
+      }
+
+      .mini-select-option:hover {
+        background: var(--color-accent-light);
+      }
+
+      .mini-select-check {
+        width: 12px;
+        flex-shrink: 0;
+        color: var(--color-accent);
+      }
+
+      /* ========== Demo Tip Banner ========== */
+      .demo-tip {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        z-index: 100;
+        background: var(--color-text-primary);
+        color: var(--color-background-primary);
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        animation: tip-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
+      }
+
+      @keyframes tip-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .demo-tip kbd {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+      }
+
+      /* ========== Scrollbar ========== */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--color-border-secondary);
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--color-text-tertiary);
+      }
+
+      /* Typescript icon color */
+      .ts-icon {
+        color: #185fa5;
+      }
+
+      /* ========== Scripts Search Bar ========== */
+      .scripts-search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        height: 40px;
+        border: 0.5px solid var(--color-border-tertiary);
+        border-radius: 10px;
+        background: var(--color-background-secondary);
+        margin-bottom: 12px;
+        transition: border-color 0.2s;
+      }
+      .scripts-search-bar:focus-within {
+        border-color: var(--color-accent);
+      }
+      .scripts-search-bar svg { color: var(--color-text-tertiary); flex-shrink: 0; }
+      .scripts-search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 13px;
+        background: transparent;
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+      }
+      .scripts-search-input::placeholder { color: var(--color-text-tertiary); }
+      .scripts-search-count {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: var(--color-background-tertiary);
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+        transition: background 0.2s, color 0.2s;
+      }
+      .scripts-search-count.has-query {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+
+      /* ========== Scripts Tabs ========== */
+      .scripts-tabs {
+        display: flex;
+        gap: 0;
+        position: relative;
+        margin-bottom: 16px;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+      }
+      .scripts-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-family: var(--font-mono);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--color-text-tertiary);
+        font-weight: 500;
+        position: relative;
+        transition: color 0.2s;
+      }
+      .scripts-tab.active { color: var(--color-accent); }
+      .scripts-tab:hover:not(.active) { color: var(--color-text-secondary); }
+      .scripts-tab-count {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: var(--color-background-tertiary);
+        color: var(--color-text-tertiary);
+        transition: background 0.2s, color 0.2s;
+      }
+      .scripts-tab.active .scripts-tab-count {
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+      }
+      .scripts-tab-indicator {
+        position: absolute;
+        bottom: -0.5px;
+        height: 2px;
+        background: var(--color-accent);
+        border-radius: 1px;
+        transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      /* ========== Scripts Tab Panels ========== */
+      .scripts-tab-panels { overflow: hidden; }
+      .scripts-tab-track {
+        display: flex;
+        width: 200%;
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .scripts-tab-panel { width: 50%; flex-shrink: 0; }
+
+      /* ========== Scripts Search Results / Empty ========== */
+      .scripts-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 40px 0;
+        color: var(--color-text-tertiary);
+      }
+      .scripts-empty svg { color: var(--color-border-secondary); }
+      .scripts-empty-text { font-size: 13px; }
+      .search-highlight {
+        background: #fde68a;
+        color: var(--color-text-primary);
+        border-radius: 2px;
+        padding: 0 1px;
+      }
+
+      /* ========== Modal Overlay ========== */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(0px);
+        pointer-events: none;
+        transition: background 0.25s ease, backdrop-filter 0.25s ease;
+      }
+      .modal-overlay.open {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(6px);
+        pointer-events: auto;
+      }
+      .modal-panel {
+        width: 480px;
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-secondary);
+        border-radius: 14px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+        transform: scale(0.92) translateY(10px);
+        opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    opacity 0.2s ease;
+        overflow: hidden;
+      }
+      .modal-overlay.open .modal-panel {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px 12px;
+        border-bottom: 0.5px solid var(--color-border-tertiary);
+      }
+      .modal-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--color-text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .modal-title svg { color: var(--color-accent); }
+      .modal-close {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-text-tertiary);
+        transition: background 0.15s, color 0.15s;
+      }
+      .modal-close:hover {
+        background: var(--color-background-tertiary);
+        color: var(--color-text-primary);
+      }
+      .modal-body { padding: 20px; }
+      .modal-desc {
+        font-size: 12px;
+        color: var(--color-text-secondary);
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+      .modal-dropzone {
+        border: 2px dashed var(--color-border-secondary);
+        border-radius: 12px;
+        padding: 32px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        text-align: center;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+      }
+      .modal-dropzone:hover, .modal-dropzone.dragover {
+        border-color: var(--color-accent);
+        background: var(--color-accent-light);
+      }
+      .modal-dropzone-text { font-size: 13px; color: var(--color-text-secondary); }
+      .modal-dropzone-hint { font-size: 11px; color: var(--color-text-tertiary); }
+      .modal-or {
+        text-align: center;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        margin: 14px 0;
+        position: relative;
+      }
+      .modal-or::before, .modal-or::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 38%;
+        height: 0.5px;
+        background: var(--color-border-tertiary);
+      }
+      .modal-or::before { left: 0; }
+      .modal-or::after { right: 0; }
+      .modal-url-row { display: flex; gap: 8px; }
+      .modal-url-input {
+        flex: 1;
+        height: 36px;
+        border: 0.5px solid var(--color-border-secondary);
+        border-radius: 8px;
+        padding: 0 12px;
+        font-size: 12px;
+        font-family: var(--font-mono);
+        background: var(--color-background-secondary);
+        color: var(--color-text-primary);
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .modal-url-input:focus { border-color: var(--color-accent); }
+      .modal-url-input::placeholder { color: var(--color-text-tertiary); }
+      .modal-footer {
+        padding: 12px 20px 16px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        border-top: 0.5px solid var(--color-border-tertiary);
+      }
+
+      /* ========== Toast ========== */
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        z-index: 200;
+        background: var(--color-text-primary);
+        color: var(--color-background-primary);
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-family: var(--font-mono);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <button class="sidebar-btn active" data-view="editor" data-index="0" title="Editor">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="7" height="18" x="3" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="3" rx="1" />
+            <rect width="7" height="7" x="14" y="14" rx="1" />
+          </svg>
+        </button>
+        <button class="sidebar-btn" data-view="scripts" data-index="1" title="Scripts">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"
+            />
+          </svg>
+        </button>
+        <button class="sidebar-btn" data-view="debugger" data-index="2" title="Debugger">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="4 17 10 11 4 5" />
+            <line x1="12" x2="20" y1="19" y2="19" />
+          </svg>
+        </button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-bottom">
+          <button class="sidebar-btn" data-view="settings" data-index="3" title="Settings">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main">
+        <div class="view-container">
+          <!-- Editor View -->
+          <div class="view active" id="view-editor">
+            <div class="status-bar">
+              <span class="status-item"
+                ><span class="status-dot"></span> Ready</span
+              >
+              <span class="status-item">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+                  />
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                </svg>
+                24 lines
+              </span>
+              <span class="status-item">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="4 7 4 4 20 4 20 7" />
+                  <line x1="9" x2="15" y1="20" y2="20" />
+                  <line x1="12" x2="12" y1="4" y2="20" />
+                </svg>
+                486 chars
+              </span>
+              <button class="status-action" id="open-palette-btn">
+                ⌘K Run Action
+              </button>
+            </div>
+            <div class="editor-area">
+              <div class="line-numbers" id="line-numbers"></div>
+              <div class="code-content" id="code-content"></div>
+            </div>
+            <div class="bottom-bar">
+              <span class="output-label">Output</span>
+              <span class="output-badge idle" id="output-badge">—</span>
+            </div>
+          </div>
+
+          <!-- Scripts View -->
+          <div class="view" id="view-scripts">
+            <div class="scripts-content">
+              <div class="scripts-header">
+                <span class="scripts-title">Scripts</span>
+                <div class="scripts-header-actions">
+                  <button class="btn">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path
+                        d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
+                      />
+                      <path d="M2 12h20" />
+                    </svg>
+                    Remote
+                  </button>
+                  <button class="btn" id="import-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" x2="12" y1="3" y2="15" />
+                    </svg>
+                    Import
+                  </button>
+                  <button class="btn btn-primary">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="M12 5v14" />
+                    </svg>
+                    New
+                  </button>
+                </div>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="scripts-search-bar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input class="scripts-search-input" type="text" placeholder="Search scripts..." id="scripts-search-input" />
+                <span class="scripts-search-count" id="scripts-search-count">28</span>
+              </div>
+
+              <!-- Tabs -->
+              <div class="scripts-tabs" id="scripts-tabs">
+                <button class="scripts-tab active" data-tab="builtin" id="tab-builtin">
+                  Built-in <span class="scripts-tab-count" id="tab-builtin-count">23</span>
+                </button>
+                <button class="scripts-tab" data-tab="custom" id="tab-custom">
+                  Custom <span class="scripts-tab-count" id="tab-custom-count">5</span>
+                </button>
+                <div class="scripts-tab-indicator" id="scripts-tab-indicator"></div>
+              </div>
+
+              <!-- Tab Panels (normal mode) -->
+              <div class="scripts-tab-panels" id="scripts-tab-panels">
+                <div class="scripts-tab-track" id="scripts-tab-track">
+                  <div class="scripts-tab-panel" id="panel-builtin"></div>
+                  <div class="scripts-tab-panel" id="panel-custom"></div>
+                </div>
+              </div>
+
+              <!-- Search Results (flat view, hidden by default) -->
+              <div class="scripts-search-results" id="scripts-search-results" style="display:none;"></div>
+            </div>
+          </div>
+
+          <!-- Debugger View -->
+          <div class="view" id="view-debugger">
+            <div class="debugger-layout">
+              <div class="debugger-left">
+                <div class="tab-bar">
+                  <button class="tab-item active">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#185FA5"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"
+                      />
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                      <path d="M10 12h4" />
+                      <path d="M10 16h4" />
+                    </svg>
+                    extract-emails.ts
+                    <span class="tab-dirty">●</span>
+                  </button>
+                  <div class="tab-actions">
+                    <button class="icon-btn" title="Save (⌘S)">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
+                        />
+                        <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
+                        <path d="M7 3v4a1 1 0 0 0 1 1h7" />
+                      </svg>
+                    </button>
+                    <button class="run-btn" id="run-btn">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <polygon points="6 3 20 12 6 21 6 3" />
+                      </svg>
+                      <span id="run-btn-text">Run</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="editor-area" style="flex: 1">
+                  <div class="line-numbers" id="debug-line-numbers"></div>
+                  <div class="code-content" id="debug-code-content"></div>
+                </div>
+                <div class="console-area">
+                  <div class="console-header">
+                    <span class="console-label">Console</span>
+                    <span
+                      class="console-status"
+                      id="console-status"
+                      style="
+                        background: var(--color-background-tertiary);
+                        color: var(--color-text-tertiary);
+                      "
+                      >idle</span
+                    >
+                    <button
+                      class="icon-btn"
+                      style="width: 24px; height: 24px"
+                      title="Clear"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="console-body" id="console-body">
+                    <div class="console-line dim">— ready —</div>
+                  </div>
+                </div>
+              </div>
+              <div class="debugger-right">
+                <div class="pane-section">
+                  <div class="pane-header">
+                    <span class="pane-header-label">Params</span>
+                    <span class="pane-header-label" style="margin-left: auto"
+                      >parsed from code</span
+                    >
+                  </div>
+                  <div class="pane-body">
+                    <div class="param-row">
+                      <span class="param-label">Deduplicate</span>
+                      <div class="toggle on" id="toggle-dedup">
+                        <div class="toggle-knob"></div>
+                      </div>
+                    </div>
+                    <div class="param-row">
+                      <span class="param-label">Output format</span>
+                      <div class="mini-select" id="format-select">
+                        <div class="mini-select-trigger" id="format-trigger">
+                          <span id="format-value">one per line</span>
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="var(--color-text-tertiary)"
+                            stroke-width="2"
+                          >
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="param-snapshot">
+                      <span class="param-snapshot-label">Snapshot</span>
+                      <pre class="param-snapshot-pre" id="param-snapshot">
+{ "unique": true, "format": "one per line" }</pre
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="pane-section flex-1">
+                  <div class="pane-header">
+                    <span class="pane-header-label"
+                      >Input · ctx.input.text</span
+                    >
+                  </div>
+                  <textarea class="pane-textarea" spellcheck="false">
+Contact us at hello@fluxtext.app
+or support@fluxtext.app for help.
+Billing: billing@company.io
+Spam: not-an-email, foo@
+hello@fluxtext.app (duplicate)</textarea
+                  >
+                </div>
+                <div class="pane-section flex-1">
+                  <div class="pane-header">
+                    <span class="pane-header-label">Output</span>
+                    <button
+                      class="icon-btn"
+                      style="width: 24px; height: 24px; margin-left: auto"
+                      title="Copy"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <rect
+                          width="14"
+                          height="14"
+                          x="8"
+                          y="8"
+                          rx="2"
+                          ry="2"
+                        />
+                        <path
+                          d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="pane-output" id="debugger-output">
+                    Run script to see output...
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings View -->
+          <div class="view" id="view-settings">
+            <div class="settings-content">
+              <div class="scripts-header">
+                <span class="scripts-title">Settings</span>
+                <span
+                  style="
+                    font-size: 0.75em;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    background: var(--color-accent-light);
+                    color: var(--color-accent-hover);
+                  "
+                  >v0.1.0-mvp</span
+                >
+              </div>
+              <div class="settings-grid">
+                <!-- Language -->
+                <div class="setting-card" style="animation-delay: 0.05s">
+                  <div class="setting-card-title">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="m5 8 6 6" />
+                      <path d="m4 14 6-6 2-3" />
+                      <path d="M2 5h12" />
+                      <path d="M7 2h1" />
+                      <path d="m22 22-5-10-5 10" />
+                      <path d="M14 18h6" />
+                    </svg>
+                    Language
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Display language</span>
+                    <span style="font-size: 0.85em; color: var(--color-accent)"
+                      >English</span
+                    >
+                  </div>
+                </div>
+                <!-- Scripts -->
+                <div class="setting-card" style="animation-delay: 0.1s">
+                  <div class="setting-card-title">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"
+                      />
+                    </svg>
+                    Scripts
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Auto reload</span>
+                    <div
+                      class="toggle on"
+                      onclick="this.classList.toggle('on')"
+                    >
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Editor -->
+                <div class="setting-card" style="animation-delay: 0.15s">
+                  <div class="setting-card-title">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <path d="M3 9h18" />
+                      <path d="M9 21V9" />
+                    </svg>
+                    Editor
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Font size</span>
+                    <div class="stepper">
+                      <button class="stepper-btn" onclick="stepFont(-1)">
+                        −
+                      </button>
+                      <span class="stepper-val" id="font-size-val">13</span>
+                      <button class="stepper-btn" onclick="stepFont(1)">
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Word wrap</span>
+                    <div class="toggle" onclick="this.classList.toggle('on')">
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Line numbers</span>
+                    <div
+                      class="toggle on"
+                      onclick="this.classList.toggle('on')"
+                    >
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Behavior -->
+                <div class="setting-card" style="animation-delay: 0.2s">
+                  <div class="setting-card-title">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <line x1="4" x2="4" y1="21" y2="14" />
+                      <line x1="4" x2="4" y1="10" y2="3" />
+                      <line x1="12" x2="12" y1="21" y2="12" />
+                      <line x1="12" x2="12" y1="8" y2="3" />
+                      <line x1="20" x2="20" y1="21" y2="16" />
+                      <line x1="20" x2="20" y1="12" y2="3" />
+                      <line x1="2" x2="6" y1="14" y2="14" />
+                      <line x1="10" x2="14" y1="8" y2="8" />
+                      <line x1="18" x2="22" y1="16" y2="16" />
+                    </svg>
+                    Behavior
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Persist params</span>
+                    <div
+                      class="toggle on"
+                      onclick="this.classList.toggle('on')"
+                    >
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Auto copy output</span>
+                    <div class="toggle" onclick="this.classList.toggle('on')">
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                  <div class="setting-row">
+                    <span class="setting-label">Realtime preview</span>
+                    <div
+                      class="toggle on"
+                      onclick="this.classList.toggle('on')"
+                    >
+                      <div class="toggle-knob"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div class="palette-overlay" id="palette-overlay">
+      <div class="palette-panel">
+        <div class="palette-search">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search actions..."
+            id="palette-input"
+          />
+        </div>
+        <div class="palette-list" id="palette-list"></div>
+        <div class="palette-hints">
+          <span class="hint-item"><kbd class="hint-key">↑↓</kbd> navigate</span>
+          <span class="hint-item"><kbd class="hint-key">↵</kbd> select</span>
+          <span class="hint-item"><kbd class="hint-key">esc</kbd> close</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="import-modal">
+      <div class="modal-panel">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            Import Script
+          </div>
+          <button class="modal-close" id="import-modal-close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-desc">
+            Import a custom script file (.ts) from your local filesystem or from a remote URL. Scripts will be added to the Custom tab.
+          </div>
+          <div class="modal-dropzone" id="import-dropzone">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <div class="modal-dropzone-text">Drop .ts file here or click to browse</div>
+            <div class="modal-dropzone-hint">Supports .ts, .js, .mjs files</div>
+          </div>
+          <div class="modal-or">or paste URL</div>
+          <div class="modal-url-row">
+            <input type="text" class="modal-url-input" id="import-url-input" placeholder="https://example.com/script.ts" />
+            <button class="btn btn-primary" id="import-url-btn" style="height:36px;padding:0 16px;font-size:12px;">Fetch</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" id="import-cancel-btn">Cancel</button>
+          <button class="btn btn-primary" id="import-confirm-btn">Import</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#27c93f" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+      <span id="toast-text"></span>
+    </div>
+
+    <!-- Demo Tip -->
+    <div class="demo-tip">
+      Press <kbd>⌘K</kbd> to open Command Palette · Click sidebar to switch
+      views
+    </div>
+
+    <script>
+      // ========== Data ==========
+      const builtinScripts = [
+        { name: 'base64', title: 'Base64 编码/解码', icon: 'B6' },
+        { name: 'case', title: '大小写转换', icon: 'Aa' },
+        { name: 'count', title: '统计字数/行数/字符', icon: '#' },
+        { name: 'css', title: 'CSS 格式化/压缩', icon: '{}' },
+        { name: 'csv', title: 'CSV ↔ JSON 互转', icon: '⊞' },
+        { name: 'dedup', title: '去重', icon: '∪' },
+        { name: 'extract', title: '正则提取', icon: '.*' },
+        { name: 'hash', title: 'Hash 摘要 (MD5/SHA)', icon: '#!' },
+        { name: 'hex', title: 'Hex 编码/解码', icon: '0x' },
+        { name: 'html', title: 'HTML 实体编码/解码', icon: '<>' },
+        { name: 'join', title: '多行合并', icon: '⊕' },
+        { name: 'json', title: 'JSON 格式化/压缩', icon: '{}' },
+        { name: 'jwt', title: 'JWT 解码', icon: 'Jw' },
+        { name: 'lorem', title: 'Lorem Ipsum 生成', icon: '¶' },
+        { name: 'replace', title: '查找替换', icon: '↔' },
+        { name: 'reverse', title: '反转文本', icon: '⟲' },
+        { name: 'sort', title: '排序', icon: '↕' },
+        { name: 'sql', title: 'SQL 格式化', icon: 'SQ' },
+        { name: 'timestamp', title: '时间戳转换', icon: '⏱' },
+        { name: 'trim', title: '去除空白', icon: '⌧' },
+        { name: 'url', title: 'URL 编码/解码', icon: '%' },
+        { name: 'xml', title: 'XML 格式化', icon: '≪≫' },
+        { name: 'yaml', title: 'YAML ↔ JSON 互转', icon: 'YA' },
+      ];
+
+      const customScripts = [
+        { name: 'my-filter.ts', title: '~/scripts/my-filter.ts', icon: 'Fi' },
+        { name: 'api-format.ts', title: '~/scripts/api-format.ts', icon: 'AF' },
+        { name: 'log-parser.ts', title: '~/scripts/log-parser.ts', icon: 'LP' },
+        { name: 'md-toc.ts', title: '~/scripts/md-toc.ts', icon: 'Md' },
+        { name: 'i18n-keys.ts', title: '~/scripts/i18n-keys.ts', icon: 'i18' },
+      ];
+
+      const paletteActions = builtinScripts.map((s) => ({
+        name: s.name,
+        title: s.title,
+        icon: s.icon,
+      }));
+
+      // ========== Code for Editor View ==========
+      const editorCode = `<span class="keyword">import</span> { defineAction } <span class="keyword">from</span> <span class="string">'fluxtext'</span>
+
+<span class="comment">// Extract all email addresses from input text</span>
+<span class="keyword">export default</span> <span class="func">defineAction</span>({
+  name: <span class="string">'extract-emails'</span>,
+  title: <span class="string">'Extract Email Addresses'</span>,
+  tags: [<span class="string">'extract'</span>, <span class="string">'email'</span>],
+
+  params: [
+    {
+      key: <span class="string">'unique'</span>,
+      label: <span class="string">'Deduplicate'</span>,
+      type: <span class="string">'boolean'</span>,
+      default: <span class="keyword">true</span>,
+    },
+    {
+      key: <span class="string">'format'</span>,
+      label: <span class="string">'Output format'</span>,
+      type: <span class="string">'single-select'</span>,
+      options: [<span class="string">'one per line'</span>, <span class="string">'comma separated'</span>],
+    },
+  ],
+
+  <span class="func">run</span>(ctx) {
+    <span class="keyword">const</span> re = <span class="string">/[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi</span>
+    <span class="keyword">const</span> matches = ctx.input.text.<span class="func">match</span>(re) || []
+    <span class="keyword">const</span> results = ctx.params.unique
+      ? [...<span class="keyword">new</span> <span class="type">Set</span>(matches.<span class="func">map</span>(e => e.<span class="func">toLowerCase</span>()))]
+      : matches
+    <span class="keyword">return</span> { text: results.<span class="func">join</span>(<span class="string">'\\n'</span>) }
+  }
+})<span class="cursor-blink"></span>`;
+
+      // ========== Populate Editor ==========
+      function populateEditor(contentEl, lineNumbersEl, code) {
+        contentEl.innerHTML = code;
+        const lineCount = code.split('\n').length;
+        lineNumbersEl.innerHTML = Array.from(
+          { length: lineCount },
+          (_, i) =>
+            `<div style="height:20px;opacity:${i < 3 ? 1 : 0.6}">${i + 1}</div>`
+        ).join('');
+      }
+
+      populateEditor(
+        document.getElementById('code-content'),
+        document.getElementById('line-numbers'),
+        editorCode
+      );
+
+      // Debugger uses same code
+      populateEditor(
+        document.getElementById('debug-code-content'),
+        document.getElementById('debug-line-numbers'),
+        editorCode
+      );
+
+      // ========== Populate Scripts (Tabbed) ==========
+      function makeScriptCardHTML(s, badge) {
+        return `
+    <div class="script-card" data-script-name="${s.name}" data-script-badge="${badge}">
+      <div class="script-icon">${s.icon}</div>
+      <div class="script-info">
+        <div class="script-name">${s.name}</div>
+        <div class="script-desc">${s.title}</div>
+      </div>
+      <button class="script-edit-btn" data-action="debug" title="Open in Debugger">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+      </button>
+      <button class="script-edit-btn" data-action="edit" title="Open in Editor" style="opacity:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+      </button>
+      <span class="script-badge">${badge}</span>
+    </div>`;
+      }
+
+      function renderBuiltinPanel() {
+        document.getElementById('panel-builtin').innerHTML = builtinScripts.map(s => makeScriptCardHTML(s, 'built-in')).join('');
+      }
+
+      function renderCustomPanel() {
+        document.getElementById('panel-custom').innerHTML = customScripts.map(s => makeScriptCardHTML(s, 'loaded')).join('');
+      }
+
+      renderBuiltinPanel();
+      renderCustomPanel();
+
+      // ========== Scripts Tabs Logic ==========
+      let activeScriptsTab = 'builtin';
+      const tabsContainer = document.getElementById('scripts-tabs');
+      const tabTrack = document.getElementById('scripts-tab-track');
+      const tabIndicator = document.getElementById('scripts-tab-indicator');
+      const tabBuiltinBtn = document.getElementById('tab-builtin');
+      const tabCustomBtn = document.getElementById('tab-custom');
+
+      function updateTabIndicator() {
+        const activeBtn = tabsContainer.querySelector('.scripts-tab.active');
+        if (!activeBtn) return;
+        const containerRect = tabsContainer.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        tabIndicator.style.left = (btnRect.left - containerRect.left) + 'px';
+        tabIndicator.style.width = btnRect.width + 'px';
+      }
+
+      function switchScriptsTab(tab) {
+        if (tab === activeScriptsTab) return;
+        activeScriptsTab = tab;
+
+        tabBuiltinBtn.classList.toggle('active', tab === 'builtin');
+        tabCustomBtn.classList.toggle('active', tab === 'custom');
+
+        // Slide track
+        if (tab === 'builtin') {
+          tabTrack.style.transform = 'translateX(0)';
+        } else {
+          tabTrack.style.transform = 'translateX(-50%)';
+        }
+
+        updateTabIndicator();
+      }
+
+      tabBuiltinBtn.addEventListener('click', () => switchScriptsTab('builtin'));
+      tabCustomBtn.addEventListener('click', () => switchScriptsTab('custom'));
+
+      // Initial indicator position (after render)
+      requestAnimationFrame(() => {
+        updateTabIndicator();
+      });
+
+      // ========== Scripts Search ==========
+      const scriptsSearchInput = document.getElementById('scripts-search-input');
+      const scriptsSearchCount = document.getElementById('scripts-search-count');
+      const scriptsTabPanels = document.getElementById('scripts-tab-panels');
+      const scriptsSearchResults = document.getElementById('scripts-search-results');
+      const scriptsTabs = document.getElementById('scripts-tabs');
+
+      function highlightText(text, query) {
+        if (!query) return text;
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped})`, 'gi');
+        return text.replace(regex, '<span class="search-highlight">$1</span>');
+      }
+
+      function filterScripts(query) {
+        const q = query.trim().toLowerCase();
+
+        if (!q) {
+          // Show tabs, hide flat results
+          scriptsTabs.style.display = '';
+          scriptsTabPanels.style.display = '';
+          scriptsSearchResults.style.display = 'none';
+          scriptsSearchCount.classList.remove('has-query');
+          scriptsSearchCount.textContent = builtinScripts.length + customScripts.length;
+          return;
+        }
+
+        // Hide tabs, show flat results
+        scriptsTabs.style.display = 'none';
+        scriptsTabPanels.style.display = 'none';
+        scriptsSearchResults.style.display = '';
+        scriptsSearchCount.classList.add('has-query');
+
+        const matchedBuiltin = builtinScripts.filter(s =>
+          s.name.toLowerCase().includes(q) || s.title.toLowerCase().includes(q)
+        );
+        const matchedCustom = customScripts.filter(s =>
+          s.name.toLowerCase().includes(q) || s.title.toLowerCase().includes(q)
+        );
+
+        const total = matchedBuiltin.length + matchedCustom.length;
+        scriptsSearchCount.textContent = total;
+
+        if (total === 0) {
+          scriptsSearchResults.innerHTML = `
+            <div class="scripts-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+                <path d="M8 11h6" />
+              </svg>
+              <div class="scripts-empty-text">No scripts found for "${query}"</div>
+            </div>`;
+          return;
+        }
+
+        let html = '';
+        if (matchedBuiltin.length > 0) {
+          html += `<div class="section-label">Built-in · ${matchedBuiltin.length}</div>`;
+          html += matchedBuiltin.map(s => {
+            const name = highlightText(s.name, q);
+            const title = highlightText(s.title, q);
+            return `
+    <div class="script-card">
+      <div class="script-icon">${s.icon}</div>
+      <div class="script-info">
+        <div class="script-name">${name}</div>
+        <div class="script-desc">${title}</div>
+      </div>
+      <button class="script-edit-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+      </button>
+      <span class="script-badge">built-in</span>
+    </div>`;
+          }).join('');
+        }
+        if (matchedCustom.length > 0) {
+          html += `<div class="section-label">Custom · ${matchedCustom.length}</div>`;
+          html += matchedCustom.map(s => {
+            const name = highlightText(s.name, q);
+            const title = highlightText(s.title, q);
+            return `
+    <div class="script-card">
+      <div class="script-icon">${s.icon}</div>
+      <div class="script-info">
+        <div class="script-name">${name}</div>
+        <div class="script-desc">${title}</div>
+      </div>
+      <button class="script-edit-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>
+      </button>
+      <span class="script-badge">loaded</span>
+    </div>`;
+          }).join('');
+        }
+
+        scriptsSearchResults.innerHTML = html;
+      }
+
+      scriptsSearchInput.addEventListener('input', (e) => {
+        filterScripts(e.target.value);
+      });
+
+      // ========== Sidebar Navigation (Directional Transitions) ==========
+      let currentViewIndex = 0;
+
+      document.querySelectorAll('.sidebar-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const view = btn.dataset.view;
+          if (!view) return;
+          const newIndex = parseInt(btn.dataset.index);
+          if (newIndex === currentViewIndex) return;
+
+          const direction = newIndex > currentViewIndex ? 'down' : 'up';
+          const currentView = document.querySelector('.view.active');
+          const newView = document.getElementById(`view-${view}`);
+
+          // Update sidebar buttons
+          document.querySelectorAll('.sidebar-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          // Apply exit class to current view
+          if (currentView) {
+            currentView.classList.remove('active');
+            currentView.classList.add(direction === 'down' ? 'exit-up' : 'exit-down');
+
+            // Clean up exit class after transition
+            setTimeout(() => {
+              currentView.classList.remove('exit-up', 'exit-down');
+            }, 400);
+          }
+
+          // Prepare the new view entry direction
+          newView.classList.remove('exit-up', 'exit-down');
+          // Set initial position for the new view (opposite of exit)
+          if (direction === 'down') {
+            newView.style.transform = 'translateY(20px) scale(0.98)';
+          } else {
+            newView.style.transform = 'translateY(-20px) scale(0.98)';
+          }
+          newView.style.opacity = '0';
+
+          // Force reflow then activate
+          newView.offsetHeight;
+          newView.style.transform = '';
+          newView.style.opacity = '';
+          newView.classList.add('active');
+
+          currentViewIndex = newIndex;
+        });
+      });
+
+      // ========== Command Palette ==========
+      const overlay = document.getElementById('palette-overlay');
+      const paletteInput = document.getElementById('palette-input');
+      const paletteList = document.getElementById('palette-list');
+      let paletteOpen = false;
+      let selectedPaletteIndex = 0;
+
+      function renderPaletteItems(filter = '') {
+        const q = filter.toLowerCase();
+        const items = q
+          ? paletteActions.filter(
+              (a) => a.name.includes(q) || a.title.toLowerCase().includes(q)
+            )
+          : paletteActions;
+        selectedPaletteIndex = 0;
+
+        paletteList.innerHTML = items
+          .map(
+            (a, i) => `
+    <div class="palette-item${i === 0 ? ' selected' : ''}" data-index="${i}" data-name="${a.name}">
+      <div class="palette-icon">${a.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="palette-name">${a.name}</div>
+        <div class="palette-desc">${a.title}</div>
+      </div>
+      <kbd class="palette-enter-key">↵</kbd>
+    </div>
+  `
+          )
+          .join('');
+
+        // Mouse events
+        paletteList.querySelectorAll('.palette-item').forEach((item) => {
+          item.addEventListener('mouseenter', () => {
+            paletteList
+              .querySelectorAll('.palette-item')
+              .forEach((el) => el.classList.remove('selected'));
+            item.classList.add('selected');
+            selectedPaletteIndex = parseInt(item.dataset.index);
+          });
+          item.addEventListener('click', () => {
+            closePalette();
+            simulateAction(item.dataset.name);
+          });
+        });
+      }
+
+      function openPalette() {
+        paletteOpen = true;
+        overlay.classList.add('open');
+        paletteInput.value = '';
+        paletteList.classList.add('animate-in');
+        renderPaletteItems();
+        setTimeout(() => paletteInput.focus(), 50);
+        // Remove animate-in after animation completes so filtering won't flash
+        setTimeout(() => paletteList.classList.remove('animate-in'), 350);
+      }
+
+      function closePalette() {
+        paletteOpen = false;
+        overlay.classList.remove('open');
+      }
+
+      function simulateAction(name) {
+        const badge = document.getElementById('output-badge');
+        badge.className = 'output-badge success';
+        badge.textContent = name + ' ✓';
+        // Reset animation
+        badge.style.animation = 'none';
+        badge.offsetHeight;
+        badge.style.animation = '';
+      }
+
+      // Open palette button
+      document
+        .getElementById('open-palette-btn')
+        .addEventListener('click', openPalette);
+
+      // Palette input filter
+      paletteInput.addEventListener('input', (e) => {
+        renderPaletteItems(e.target.value);
+      });
+
+      // Palette keyboard
+      paletteInput.addEventListener('keydown', (e) => {
+        const items = paletteList.querySelectorAll('.palette-item');
+        if (e.key === 'Escape') {
+          closePalette();
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectedPaletteIndex = Math.min(
+            selectedPaletteIndex + 1,
+            items.length - 1
+          );
+          items.forEach((el) => el.classList.remove('selected'));
+          items[selectedPaletteIndex]?.classList.add('selected');
+          items[selectedPaletteIndex]?.scrollIntoView({ block: 'nearest' });
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectedPaletteIndex = Math.max(selectedPaletteIndex - 1, 0);
+          items.forEach((el) => el.classList.remove('selected'));
+          items[selectedPaletteIndex]?.classList.add('selected');
+          items[selectedPaletteIndex]?.scrollIntoView({ block: 'nearest' });
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const item = items[selectedPaletteIndex];
+          if (item) {
+            closePalette();
+            simulateAction(item.dataset.name);
+          }
+        }
+      });
+
+      // Overlay click to close
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closePalette();
+      });
+
+      // Global ⌘K shortcut
+      document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          if (paletteOpen) closePalette();
+          else openPalette();
+        }
+        if (e.key === 'Escape' && paletteOpen) closePalette();
+      });
+
+      // ========== Font Size Stepper ==========
+      let fontSize = 13;
+      function stepFont(delta) {
+        fontSize = Math.max(10, Math.min(24, fontSize + delta));
+        const el = document.getElementById('font-size-val');
+        el.textContent = fontSize;
+        el.classList.remove('bump');
+        el.offsetHeight;
+        el.classList.add('bump');
+      }
+
+      // ========== Debugger Toggle ==========
+      document
+        .getElementById('toggle-dedup')
+        .addEventListener('click', function () {
+          this.classList.toggle('on');
+          updateParamSnapshot();
+        });
+
+      function updateParamSnapshot() {
+        const unique = document
+          .getElementById('toggle-dedup')
+          .classList.contains('on');
+        const format = document.getElementById('format-value').textContent;
+        document.getElementById('param-snapshot').textContent = JSON.stringify(
+          { unique, format },
+          null,
+          2
+        );
+      }
+
+      // ========== Format Select ==========
+      const formatSelect = document.getElementById('format-select');
+      const formatTrigger = document.getElementById('format-trigger');
+      const formatOptions = ['one per line', 'comma separated'];
+      let formatOpen = false;
+
+      formatTrigger.addEventListener('click', () => {
+        if (formatOpen) {
+          closeFormatDropdown();
+        } else {
+          openFormatDropdown();
+        }
+      });
+
+      function openFormatDropdown() {
+        formatOpen = true;
+        const current = document.getElementById('format-value').textContent;
+        const dropdown = document.createElement('div');
+        dropdown.className = 'mini-select-dropdown';
+        dropdown.id = 'format-dropdown';
+        dropdown.innerHTML = formatOptions
+          .map(
+            (opt) => `
+    <div class="mini-select-option" data-value="${opt}">
+      <span class="mini-select-check">${opt === current ? '✓' : ''}</span>
+      <span>${opt}</span>
+    </div>
+  `
+          )
+          .join('');
+        formatSelect.appendChild(dropdown);
+
+        dropdown.querySelectorAll('.mini-select-option').forEach((opt) => {
+          opt.addEventListener('click', () => {
+            document.getElementById('format-value').textContent =
+              opt.dataset.value;
+            closeFormatDropdown();
+            updateParamSnapshot();
+          });
+        });
+
+        // Close on outside click
+        setTimeout(() => {
+          document.addEventListener('mousedown', closeFormatOnOutside);
+        }, 0);
+      }
+
+      function closeFormatDropdown() {
+        formatOpen = false;
+        const dd = document.getElementById('format-dropdown');
+        if (dd) dd.remove();
+        document.removeEventListener('mousedown', closeFormatOnOutside);
+      }
+
+      function closeFormatOnOutside(e) {
+        if (!formatSelect.contains(e.target)) closeFormatDropdown();
+      }
+
+      // ========== Run Button ==========
+      document.getElementById('run-btn').addEventListener('click', function () {
+        const btn = this;
+        const btnText = document.getElementById('run-btn-text');
+        const consoleBody = document.getElementById('console-body');
+        const consoleStatus = document.getElementById('console-status');
+        const output = document.getElementById('debugger-output');
+
+        btn.classList.add('running');
+        btnText.textContent = 'Running...';
+
+        consoleBody.innerHTML = '';
+        consoleStatus.style.background = 'var(--color-warning-bg)';
+        consoleStatus.style.color = '#633806';
+        consoleStatus.textContent = 'running...';
+
+        const logs = [
+          { type: 'dim', text: '> run extract-emails', delay: 100 },
+          {
+            type: 'dim',
+            text: '  params: { "unique": true, "format": "one per line" }',
+            delay: 200,
+          },
+          { type: 'dim', text: '  input: 5 lines', delay: 300 },
+          { type: 'ok', text: '✓ regex matched 4 addresses', delay: 600 },
+          {
+            type: 'ok',
+            text: '✓ deduplicated → removed 1 duplicate',
+            delay: 750,
+          },
+          { type: 'ok', text: '✓ output: 3 addresses', delay: 900 },
+          { type: 'dim', text: '  done in 2ms', delay: 1000 },
+        ];
+
+        logs.forEach((log) => {
+          setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = `console-line ${log.type}`;
+            div.textContent = log.text;
+            consoleBody.appendChild(div);
+            consoleBody.scrollTop = consoleBody.scrollHeight;
+          }, log.delay);
+        });
+
+        setTimeout(() => {
+          btn.classList.remove('running');
+          btnText.textContent = 'Run';
+          consoleStatus.style.background = 'var(--color-success-bg)';
+          consoleStatus.style.color = 'var(--color-success-text)';
+          consoleStatus.textContent = '3 results';
+
+          output.className = 'pane-output has-content';
+          output.textContent =
+            'hello@fluxtext.app\nsupport@fluxtext.app\nbilling@company.io';
+        }, 1100);
+      });
+
+      // ========== Helper: navigate to a view programmatically ==========
+      function navigateToView(viewName) {
+        const targetBtn = document.querySelector(`.sidebar-btn[data-view="${viewName}"]`);
+        if (targetBtn) targetBtn.click();
+      }
+
+      // ========== Helper: show toast ==========
+      function showToast(text) {
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toast-text');
+        toastText.textContent = text;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      }
+
+      // ========== Script Card Click → Page Linkage ==========
+      // Use event delegation on the scripts content
+      document.getElementById('view-scripts').addEventListener('click', (e) => {
+        // Check if clicked on a debug button
+        const debugBtn = e.target.closest('[data-action="debug"]');
+        if (debugBtn) {
+          e.stopPropagation();
+          const card = debugBtn.closest('.script-card');
+          const scriptName = card?.dataset.scriptName;
+          if (scriptName) {
+            // Update debugger tab name
+            const tabItem = document.querySelector('.tab-item.active');
+            if (tabItem) {
+              tabItem.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+                  node.textContent = '\n                    ' + scriptName + (scriptName.endsWith('.ts') ? '' : '.ts') + '\n                    ';
+                }
+              });
+            }
+            showToast('Opened ' + scriptName + ' in Debugger');
+            navigateToView('debugger');
+          }
+          return;
+        }
+
+        // Check if clicked on an edit button
+        const editBtn = e.target.closest('[data-action="edit"]');
+        if (editBtn) {
+          e.stopPropagation();
+          const card = editBtn.closest('.script-card');
+          const scriptName = card?.dataset.scriptName;
+          if (scriptName) {
+            showToast('Opened ' + scriptName + ' in Editor');
+            navigateToView('editor');
+          }
+          return;
+        }
+
+        // Check if clicked on a script card body (not buttons)
+        const card = e.target.closest('.script-card');
+        if (card && !e.target.closest('.script-edit-btn')) {
+          const scriptName = card.dataset.scriptName;
+          if (scriptName) {
+            showToast('Opened ' + scriptName + ' in Editor');
+            navigateToView('editor');
+          }
+        }
+      });
+
+      // ========== Import Modal ==========
+      const importModal = document.getElementById('import-modal');
+      const importDropzone = document.getElementById('import-dropzone');
+
+      function openImportModal() {
+        importModal.classList.add('open');
+        document.getElementById('import-url-input').value = '';
+      }
+
+      function closeImportModal() {
+        importModal.classList.remove('open');
+      }
+
+      document.getElementById('import-btn').addEventListener('click', openImportModal);
+      document.getElementById('import-modal-close').addEventListener('click', closeImportModal);
+      document.getElementById('import-cancel-btn').addEventListener('click', closeImportModal);
+      importModal.addEventListener('click', (e) => {
+        if (e.target === importModal) closeImportModal();
+      });
+
+      // Dropzone hover effects
+      importDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        importDropzone.classList.add('dragover');
+      });
+      importDropzone.addEventListener('dragleave', () => {
+        importDropzone.classList.remove('dragover');
+      });
+      importDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        importDropzone.classList.remove('dragover');
+        // Simulate import success
+        closeImportModal();
+        showToast('Script imported successfully');
+        // Switch to Custom tab
+        switchScriptsTab('custom');
+      });
+      importDropzone.addEventListener('click', () => {
+        // Simulate file picker
+        closeImportModal();
+        setTimeout(() => {
+          showToast('Script imported successfully');
+          switchScriptsTab('custom');
+        }, 300);
+      });
+
+      // Fetch URL button
+      document.getElementById('import-url-btn').addEventListener('click', () => {
+        const url = document.getElementById('import-url-input').value.trim();
+        if (!url) {
+          document.getElementById('import-url-input').focus();
+          return;
+        }
+        closeImportModal();
+        showToast('Fetched script from URL');
+        switchScriptsTab('custom');
+      });
+
+      // Import confirm
+      document.getElementById('import-confirm-btn').addEventListener('click', () => {
+        closeImportModal();
+        showToast('Script imported successfully');
+        switchScriptsTab('custom');
+      });
+
+      // Esc to close import modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && importModal.classList.contains('open')) {
+          closeImportModal();
+        }
+      });
+    </script>
+  </body>
+</html>

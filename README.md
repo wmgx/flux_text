@@ -32,7 +32,6 @@
 ## 开发
 
 ```bash
-cd fluxtext-app
 npm install
 npm run tauri dev
 ```
@@ -40,13 +39,12 @@ npm run tauri dev
 ## 构建
 
 ```bash
-cd fluxtext-app
 npm run tauri build
 ```
 
 ## 发布新版本
 
-1. 修改 `fluxtext-app/src-tauri/tauri.conf.json` 中的 `version`
+1. 修改 `src-tauri/tauri.conf.json` 中的 `version`
 2. 提交并打 tag：
    ```bash
    git tag v0.2.0
