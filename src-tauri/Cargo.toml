@@ -1,6 +1,6 @@
 [package]
 name = "fluxtext"
-version = "0.1.0"
+version = "0.2.0"
 description = "FluxText — A command-driven text processing workbench"
 authors = ["FluxText"]
 license = "MIT"
