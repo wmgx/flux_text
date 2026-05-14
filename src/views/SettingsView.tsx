@@ -1,4 +1,6 @@
 import { useAppStore } from '../store'
+import type { ActionDef } from '../store'
+import { parseScriptToAction } from '../store'
 import { t } from '../i18n'
 import { Puzzle, Layout, SlidersHorizontal, Languages, ChevronDown, Check, Minus, Plus, Info, RefreshCw, Download } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
@@ -269,6 +271,23 @@ function UpdateChecker({ locale }: { locale: 'zh' | 'en' }) {
       if (result.updated) {
         setScriptsStatus('updated')
         setScriptsVersion(result.version || 0)
+        // 更新后自动重载到内存
+        if ((window as any).__TAURI_INTERNALS__) {
+          try {
+            const { invoke } = await import('@tauri-apps/api/core')
+            const watchDir = useAppStore.getState().settings.watchDirectory
+            const scripts = await invoke<{ name: string; path: string; content: string; builtin?: boolean }[]>('read_scripts_dir', { path: watchDir })
+            const builtinsFromDisk = scripts
+              .filter(s => s.builtin)
+              .map(s => parseScriptToAction(s.content))
+              .filter((a): a is ActionDef => a !== null)
+            if (builtinsFromDisk.length > 0) {
+              useAppStore.getState().setBuiltinActionsFromDisk(builtinsFromDisk)
+            }
+          } catch (e) {
+            console.error('[FluxText] Failed to reload scripts after update:', e)
+          }
+        }
       } else {
         setScriptsStatus(result.error ? 'error' : 'up-to-date')
       }

@@ -40,7 +40,7 @@ const messages = {
     'scripts.disabled': 'Disabled',
     'scripts.checkUpdate': 'Check updates',
     'scripts.checkingUpdate': 'Checking...',
-    'scripts.scriptsUpdated': 'Updated to v{version}, please restart',
+    'scripts.scriptsUpdated': 'Updated to v{version}',
     'scripts.scriptsUpToDate': 'Already up to date',
     'scripts.scriptsUpdateError': 'Update check failed',
 
@@ -156,7 +156,7 @@ const messages = {
     'scripts.disabled': '已禁用',
     'scripts.checkUpdate': '检查更新',
     'scripts.checkingUpdate': '检查中...',
-    'scripts.scriptsUpdated': '已更新到 v{version}，请重启应用',
+    'scripts.scriptsUpdated': '已更新到 v{version}',
     'scripts.scriptsUpToDate': '已是最新版本',
     'scripts.scriptsUpdateError': '检查更新失败',
 

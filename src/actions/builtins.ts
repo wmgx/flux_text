@@ -887,4 +887,120 @@ export const builtinActions: ActionDef[] = [
       return { text: JSON.stringify(obj, null, 2) }
     },
   },
+  {
+    name: 'append',
+    title: 'Append to Lines',
+    titleI18n: { zh: '追加到每行' },
+    icon: 'ArrowRightToLine',
+    aliases: ['append-lines', 'suffix'],
+    description: 'Append a suffix to the end of each line',
+    descriptionI18n: { zh: '在每行末尾追加指定文本' },
+    tags: ['text', 'lines'],
+    builtin: true,
+    params: [
+      {
+        key: 'suffix',
+        label: 'Suffix',
+        labelI18n: { zh: '后缀' },
+        type: 'text',
+        default: ',',
+      },
+    ],
+    run(ctx) {
+      const suffix = ctx.params.suffix ?? ','
+      const lines = ctx.input.text.split('\n').map(l => l + suffix)
+      return { text: lines.join('\n') }
+    },
+  },
+  {
+    name: 'prepend',
+    title: 'Prepend to Lines',
+    titleI18n: { zh: '前缀插入每行' },
+    icon: 'ArrowLeftToLine',
+    aliases: ['prepend-lines', 'prefix'],
+    description: 'Prepend a prefix to the beginning of each line',
+    descriptionI18n: { zh: '在每行开头插入指定文本' },
+    tags: ['text', 'lines'],
+    builtin: true,
+    params: [
+      {
+        key: 'prefix',
+        label: 'Prefix',
+        labelI18n: { zh: '前缀' },
+        type: 'text',
+        default: '- ',
+      },
+    ],
+    run(ctx) {
+      const prefix = ctx.params.prefix ?? '- '
+      const lines = ctx.input.text.split('\n').map(l => prefix + l)
+      return { text: lines.join('\n') }
+    },
+  },
+  {
+    name: 'wrap',
+    title: 'Wrap Lines',
+    titleI18n: { zh: '包裹每行' },
+    icon: 'WrapText',
+    aliases: ['wrap-lines', 'surround'],
+    description: 'Wrap each line with prefix and suffix',
+    descriptionI18n: { zh: '在每行两端添加指定文本' },
+    tags: ['text', 'lines'],
+    builtin: true,
+    params: [
+      {
+        key: 'left',
+        label: 'Left',
+        labelI18n: { zh: '左侧' },
+        type: 'text',
+        default: '"',
+      },
+      {
+        key: 'right',
+        label: 'Right',
+        labelI18n: { zh: '右侧' },
+        type: 'text',
+        default: '"',
+      },
+    ],
+    run(ctx) {
+      const left = ctx.params.left ?? '"'
+      const right = ctx.params.right ?? '"'
+      const lines = ctx.input.text.split('\n').map(l => left + l + right)
+      return { text: lines.join('\n') }
+    },
+  },
+  {
+    name: 'sqlin',
+    title: 'Lines to SQL IN',
+    titleI18n: { zh: '行转 SQL IN' },
+    icon: 'Database',
+    aliases: ['sql-in', 'lines-to-sql'],
+    description: 'Convert lines to SQL IN clause',
+    descriptionI18n: { zh: '将多行文本转为 SQL IN 子句' },
+    tags: ['sql', 'convert'],
+    builtin: true,
+    params: [
+      {
+        key: 'mode',
+        label: 'Mode',
+        labelI18n: { zh: '模式' },
+        type: 'single-select',
+        options: [
+          { label: 'String', value: 'string', labelI18n: { zh: '字符串' } },
+          { label: 'Number', value: 'number', labelI18n: { zh: '数字' } },
+        ],
+        default: 'string',
+      },
+    ],
+    run(ctx) {
+      const lines = ctx.input.text.split('\n').filter(l => l.trim() !== '')
+      if (ctx.params.mode === 'number') {
+        const values = lines.map(l => l.trim())
+        return { text: '(' + values.join(',') + ')' }
+      }
+      const values = lines.map(l => "'" + l.trim().replace(/'/g, "''") + "'")
+      return { text: '(' + values.join(',') + ')' }
+    },
+  },
 ]

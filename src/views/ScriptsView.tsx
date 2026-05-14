@@ -143,6 +143,23 @@ export function ScriptsView() {
       if (result.updated) {
         setScriptsCheckStatus('updated')
         setScriptsNewVersion(result.version || 0)
+        // 更新后自动重载到内存，无需重启
+        if ((window as any).__TAURI_INTERNALS__) {
+          try {
+            const { invoke } = await import('@tauri-apps/api/core')
+            const watchDir = useAppStore.getState().settings.watchDirectory
+            const scripts = await invoke<{ name: string; path: string; content: string; builtin?: boolean }[]>('read_scripts_dir', { path: watchDir })
+            const builtinsFromDisk = scripts
+              .filter(s => s.builtin)
+              .map(s => parseScriptToAction(s.content))
+              .filter((a): a is ActionDef => a !== null)
+            if (builtinsFromDisk.length > 0) {
+              useAppStore.getState().setBuiltinActionsFromDisk(builtinsFromDisk)
+            }
+          } catch (e) {
+            console.error('[FluxText] Failed to reload scripts after update:', e)
+          }
+        }
       } else {
         setScriptsCheckStatus(result.error ? 'error' : 'up-to-date')
       }
