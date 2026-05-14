@@ -1,6 +1,7 @@
 {
   "version": 1,
   "files": [
+    "append.ts",
     "base64.ts",
     "case.ts",
     "count.ts",
@@ -19,12 +20,15 @@
     "querystring.ts",
     "reverse.ts",
     "slashes.ts",
+    "prepend.ts",
     "sort.ts",
     "sortjson.ts",
     "sql.ts",
+    "sqlin.ts",
     "timestamp.ts",
     "trim.ts",
     "url.ts",
+    "wrap.ts",
     "xml.ts",
     "yaml.ts"
   ]
