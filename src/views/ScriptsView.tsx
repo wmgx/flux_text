@@ -215,6 +215,7 @@ export function ScriptsView() {
       dirty: false,
       running: false,
       fileNameEditing: false,
+      builtin: true,
     })
     setActiveView('debugger')
   }

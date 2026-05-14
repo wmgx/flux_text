@@ -29,6 +29,7 @@ export function DebuggerView() {
   const setDebuggerRunning = useAppStore((s) => s.setDebuggerRunning)
   const debuggerFileNameEditing = useAppStore((s) => s.debuggerFileNameEditing)
   const setDebuggerFileNameEditing = useAppStore((s) => s.setDebuggerFileNameEditing)
+  const debuggerBuiltin = useAppStore((s) => s.debuggerBuiltin)
   const debuggerTabs = useAppStore((s) => s.debuggerTabs)
   const activeDebuggerTabId = useAppStore((s) => s.activeDebuggerTabId)
   const switchDebuggerTab = useAppStore((s) => s.switchDebuggerTab)
@@ -185,7 +186,7 @@ export function DebuggerView() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        handleSave()
+        if (!debuggerBuiltin) handleSave()
       }
     }
     window.addEventListener('keydown', handler)
@@ -243,13 +244,13 @@ export function DebuggerView() {
                       className="truncate max-w-[150px]"
                       style={{ fontFamily: 'var(--font-mono)' }}
                       onDoubleClick={(e) => {
-                        if (isActive) {
+                        if (isActive && !debuggerBuiltin) {
                           e.stopPropagation()
                           setFileNameDraft(debuggerFileName)
                           setEditingFileName(true)
                         }
                       }}
-                      title={isActive ? t(locale, 'debugger.dblClickRename') : name}
+                      title={isActive ? (debuggerBuiltin ? 'Built-in (read-only)' : t(locale, 'debugger.dblClickRename')) : name}
                     >
                       {name}
                     </span>
@@ -272,8 +273,9 @@ export function DebuggerView() {
             <button
               onClick={handleSave}
               className="w-7 h-7 rounded-md border-none bg-transparent cursor-pointer flex items-center justify-center"
-              style={{ color: 'var(--color-text-tertiary)' }}
+              style={{ color: 'var(--color-text-tertiary)', opacity: debuggerBuiltin ? 0.3 : 1 }}
               title="Save (⌘S)"
+              disabled={debuggerBuiltin}
             >
               <Save size={14} />
             </button>
@@ -323,6 +325,7 @@ export function DebuggerView() {
               padding: { top: 10 },
               fontFamily: 'var(--font-mono)',
               tabSize: 2,
+              readOnly: debuggerBuiltin,
             }}
             theme="vs"
           />

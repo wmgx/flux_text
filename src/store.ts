@@ -75,6 +75,7 @@ export interface DebuggerTab {
   dirty: boolean
   running: boolean
   fileNameEditing: boolean
+  builtin?: boolean
 }
 
 interface AppState {
@@ -129,6 +130,7 @@ interface AppState {
   setDebuggerRunning: (running: boolean) => void
   debuggerFileNameEditing: boolean
   setDebuggerFileNameEditing: (editing: boolean) => void
+  debuggerBuiltin: boolean
 
   // Debugger Tabs
   debuggerTabs: DebuggerTab[]
@@ -170,6 +172,7 @@ function _snapshotActiveTab(state: AppState): DebuggerTab {
     dirty: state.debuggerDirty,
     running: state.debuggerRunning,
     fileNameEditing: false,
+    builtin: state.debuggerBuiltin,
   }
 }
 
@@ -185,6 +188,7 @@ function _loadTabState(tab: DebuggerTab) {
     debuggerDirty: tab.dirty,
     debuggerRunning: tab.running,
     debuggerFileNameEditing: tab.fileNameEditing,
+    debuggerBuiltin: !!tab.builtin,
   }
 }
 
@@ -307,6 +311,7 @@ hello@fluxtext.app (duplicate)`,
   setDebuggerRunning: (running) => set({ debuggerRunning: running }),
   debuggerFileNameEditing: false,
   setDebuggerFileNameEditing: (editing) => set({ debuggerFileNameEditing: editing }),
+  debuggerBuiltin: false,
 
   // Debugger Tabs
   debuggerTabs: [{
