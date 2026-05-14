@@ -83,7 +83,7 @@ function generateScriptSource(action: import('../store').ActionDef): string {
   }
   if (action.run) {
     const runStr = action.run.toString()
-    if (runStr.startsWith('run')) {
+    if (/^(async\s+)?run[\s(]/.test(runStr)) {
       lines.push(`  ${runStr},`)
     } else {
       lines.push(`  run: ${runStr},`)
