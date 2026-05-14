@@ -8,6 +8,7 @@
 const LOCAL_REGISTRY: Record<string, () => Promise<any>> = {
   'https://esm.sh/js-yaml@4?bundle': () => import('js-yaml'),
   'https://esm.sh/sql-formatter@15?bundle': () => import('sql-formatter'),
+  'https://esm.sh/bignumber.js@9?bundle': () => import('bignumber.js'),
 }
 
 const DB_NAME = 'fluxtext-cdn-cache'
